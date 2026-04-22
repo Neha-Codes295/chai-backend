@@ -8,3 +8,9 @@ it is a dev dep
 npm i -D nodemon
 
 we'll discuss and work on all the folders created in src
+
+let's get prettier too
+npm i -D prettier
+we need some files too for using it
+.prettierrc
+.prettierignore
