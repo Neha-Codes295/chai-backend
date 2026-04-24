@@ -7,25 +7,26 @@ import dotenv from "dotenv";
 // import express from "express";
 // const app = express();
 import connectDB from "./db/index.js";
+import { app } from "./app.js"
 
 dotenv.config({ path: ".env" });
 // use dev script in package.json
 
 
 connectDB()
-.then(() => {
-    app.on("error", (error) => {
-        console.log("Error connecting to MongoDB:", error);
-        throw error;
-    }); 
-    app.listen(process.env.PORT || 8000, () => {
-        console.log(`App is Listening on port ${process.env.PORT}`);
+    .then(() => {
+        app.on("error", (error) => {
+            console.log("Error connecting to MongoDB:", error);
+            throw error;
+        });
+        app.listen(process.env.PORT || 8000, () => {
+            console.log(`App is Listening on port ${process.env.PORT}`);
+        });
+    })
+    .catch((err) => {
+        console.error("Error connecting to MongoDB:", err);
+        throw err;
     });
-})
-.catch((err) => {
-    console.error("Error connecting to MongoDB:", err);
-    throw err;
-});
 
 
 
