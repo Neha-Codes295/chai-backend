@@ -29,7 +29,7 @@ const userSchema = new Schema(
             type: String, //cloudinary url
             required: true,
         },
-        coverimage: {
+        coverImage: {
             type: String, //cloudinary url
         },
         watchHistory: [{
@@ -52,13 +52,17 @@ const userSchema = new Schema(
 // middleware to hash password before saving user, also handles password updates, if password is modified or new user is created then hash it, otherwise skip hashing, check if condition
 
 // callback gets complex here
-userSchema.pre("save", async function (next) {
-    if (!this.isModified("password")) {
-        return next(); // skip hashing if password is not modified
-    }
+// userSchema.pre("save", async function (next) {
+//     if (!this.isModified("password")) {
+//         return next(); // skip hashing if password is not modified
+//     }
+//     this.password = await bcrypt.hash(this.password, 10);
+//     next(); //runs every time 
+//     // only when password is modified or new user is created then do it, otherwise skip hashing, check if condition
+// });
+userSchema.pre("save", async function () {
+    if (!this.isModified("password")) return;
     this.password = await bcrypt.hash(this.password, 10);
-    next(); //runs every time 
-    // only when password is modified or new user is created then do it, otherwise skip hashing, check if condition
 });
 
 // method to compare password during login
