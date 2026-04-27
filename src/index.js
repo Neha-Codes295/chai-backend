@@ -1,17 +1,8 @@
-// require("dotenv").config({path: "./env"});
-// for consistency
-import dotenv from "dotenv";
-
-// import mongoose from "mongoose";
-// import {DB_Name} from "./constants";
-// import express from "express";
-// const app = express();
+import "dotenv/config";
 import connectDB from "./db/index.js";
-import { app } from "./app.js"
+import { app } from "./app.js";
 
-dotenv.config({ path: ".env" });
-// use dev script in package.json
-
+const port = Number(process.env.PORT) || 8001;
 
 connectDB()
     .then(() => {
@@ -19,8 +10,8 @@ connectDB()
             console.log("Error connecting to MongoDB:", error);
             throw error;
         });
-        app.listen(process.env.PORT || 8000, () => {
-            console.log(`App is Listening on port ${process.env.PORT}`);
+        app.listen(port, () => {
+            console.log(`app listening on http://localhost:${port}`);
         });
     })
     .catch((err) => {
@@ -29,14 +20,8 @@ connectDB()
     });
 
 
-
-
-
 // function connectDB() {}
 // connectDB();
-
-
-
 
 /*
 // more professional: iffi
