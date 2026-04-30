@@ -37,8 +37,9 @@ const userSchema = new Schema(
             ref: "Video",
         }],
         password: {
-            type: String, //encrypted password
+            type: String, // encrypted password; excluded from query results unless .select("+password")
             required: [true, "Password is required"],
+            select: false,
         },
         refreshToken: {
             type: String,
@@ -71,15 +72,15 @@ userSchema.methods.isPasswordCorrect = async function (passwordEntered) {
 };
 
 userSchema.methods.generateAccessToken = function () {
-    return jwt.sign( // payload, secret, options
-        { _id: this._id, username: this.username, email: this.email, fullname: this.fullname },
+    return jwt.sign( // payload: string _id so verify() always returns a plain id
+        { _id: this._id.toString(), username: this.username, email: this.email, fullname: this.fullname },
         process.env.ACCESS_TOKEN_SECRET,
         { expiresIn: process.env.ACCESS_TOKEN_EXPIRY }
     );
 }
 userSchema.methods.generateRefreshToken = function () {
     return jwt.sign(
-        { _id: this._id}, // refresh token have less info
+        { _id: this._id.toString() },
         process.env.REFRESH_TOKEN_SECRET,
         { expiresIn: process.env.REFRESH_TOKEN_EXPIRY }
     );
