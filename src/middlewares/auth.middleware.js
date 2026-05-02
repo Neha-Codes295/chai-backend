@@ -28,3 +28,22 @@ export const verifyJWT = asyncHandler(async (req, _, next) => {
     }
 
 })
+
+/** Call next() without user when there is no / invalid token (read-only / public + owner routes). */
+export const optionalAuth = asyncHandler(async (req, _res, next) => {
+    try {
+        const token = req.cookies?.accessToken || req.header("Authorization")?.replace("Bearer ", "")
+        if (!token) {
+            return next()
+        }
+        const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET)
+        const user = await User.findById(decodedToken?._id).select("-password -refreshToken")
+        if (user) {
+            req.user = user
+            req.userId = user._id
+        }
+    } catch {
+        // unauthenticated: continue as guest
+    }
+    next()
+})
