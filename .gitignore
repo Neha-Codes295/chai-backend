@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+
+# Builds
+dist/
+dist-ssr/
+build/
+
+# Local env & secrets (templates stay tracked: .env.sample / .env.example)
+.env
+.env.*
+!.env.sample
+!.env.example
+!**/.env.sample
+!**/.env.example
+
+# Tooling / local overrides
+*.local
+.npmrc
+.yarn/cache
+
+# Logs & caches
+*.log
+.cache/
+.parcel-cache/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
