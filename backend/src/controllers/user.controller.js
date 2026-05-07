@@ -118,10 +118,10 @@ const loginUser = asyncHandler(async (req, res) => {
     if (!username && !email) {
         throw new ApiError(400, "email or username is required")
     }
-    // we can use anyone as well!!
+    // Password must be loaded for bcrypt (schema has `select: false` on password).
     const user = await User.findOne({
         $or: [{ username }, { email }]
-    })
+    }).select("+password")
 
     if (!user) {
         throw new ApiError(404, "User does not exist")
