@@ -7,7 +7,12 @@ import {
   useState,
   type ReactNode,
 } from 'react'
-import { apiFetch, readApiResponse } from '../api/client'
+import {
+  apiFetch,
+  formatApiErrors,
+  readApiResponse,
+  registerSessionRefresh,
+} from '../api/client'
 import type { User } from '../types/user'
 
 type LoginPayload = {
@@ -16,14 +21,20 @@ type LoginPayload = {
   password: string
 }
 
+export type AuthActionResult = {
+  ok: boolean
+  message?: string
+  errors?: unknown[]
+}
+
 type AuthContextValue = {
   user: User | null
   loading: boolean
   sessionError: string | null
   refreshSession: () => Promise<void>
-  login: (payload: LoginPayload) => Promise<{ ok: boolean; message?: string }>
+  login: (payload: LoginPayload) => Promise<AuthActionResult>
   logout: () => Promise<void>
-  register: (formData: FormData) => Promise<{ ok: boolean; message?: string }>
+  register: (formData: FormData) => Promise<AuthActionResult>
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -42,6 +53,19 @@ async function fetchCurrentUser(): Promise<User | null> {
   const { ok, data } = await readApiResponse<User>(res)
   if (!ok || !data) return null
   return data
+}
+
+function toAuthResult(parsed: {
+  ok: boolean
+  message?: string
+  errors?: unknown[]
+}): AuthActionResult {
+  if (parsed.ok) return { ok: true }
+  return {
+    ok: false,
+    message: formatApiErrors(parsed.message, parsed.errors),
+    errors: parsed.errors,
+  }
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -77,23 +101,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [refreshSession])
 
+  useEffect(() => {
+    const tryRefreshAfter401 = async () => {
+      const ok = await postRefreshToken()
+      if (!ok) {
+        setUser(null)
+        return false
+      }
+      const next = await fetchCurrentUser()
+      setUser(next)
+      return !!next
+    }
+
+    registerSessionRefresh(tryRefreshAfter401)
+    return () => registerSessionRefresh(null)
+  }, [])
+
   const login = useCallback(async (payload: LoginPayload) => {
     const res = await apiFetch('/api/v1/users/login', {
       method: 'POST',
       body: JSON.stringify(payload),
     })
-    const { ok, message, data } = await readApiResponse<{ user?: User }>(res)
-    if (ok && data?.user) {
-      setUser(data.user)
+    const parsed = await readApiResponse<{ user?: User }>(res)
+    if (parsed.ok && parsed.data?.user) {
+      setUser(parsed.data.user)
       return { ok: true }
     }
-    return { ok: false, message: message || 'Login failed' }
+    return toAuthResult(parsed)
   }, [])
 
   const logout = useCallback(async () => {
     try {
       await apiFetch('/api/v1/users/logout', { method: 'POST' })
-    } finally {
+    } catch {} finally {
       setUser(null)
     }
   }, [])
@@ -103,8 +143,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       method: 'POST',
       body: formData,
     })
-    const { ok, message } = await readApiResponse<unknown>(res)
-    return { ok, message: message || (ok ? 'Registered' : 'Registration failed') }
+    const parsed = await readApiResponse<unknown>(res)
+    if (parsed.ok) return { ok: true }
+    return toAuthResult(parsed)
   }, [])
 
   const value = useMemo<AuthContextValue>(

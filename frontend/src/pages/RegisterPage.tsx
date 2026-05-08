@@ -1,26 +1,45 @@
 import { useState, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthProvider'
 import { Button, ErrorBanner, Input } from '../components/ui'
+
+function errorsToLines(errors: unknown[] | undefined): string[] | undefined {
+  if (!errors?.length) return undefined
+  return errors.map((e) =>
+    typeof e === 'string' ? e : JSON.stringify(e),
+  )
+}
+
+type RegisterLocationState = { from?: string }
 
 export function RegisterPage() {
   const { register } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
+  const returnTo = (location.state as RegisterLocationState | null)?.from
 
   const [fullname, setFullname] = useState('')
   const [email, setEmail] = useState('')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [avatar, setAvatar] = useState<File | null>(null)
   const [cover, setCover] = useState<File | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [errorDetails, setErrorDetails] = useState<string[] | undefined>()
+
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
     setError(null)
+    setErrorDetails(undefined)
 
     if (!fullname.trim() || !email.trim() || !username.trim() || !password) {
       setError('All text fields are required.')
+      return
+    }
+    if (password.length < 8) {
+      setError('Use at least 8 characters for your password.')
       return
     }
     if (!avatar) {
@@ -31,7 +50,7 @@ export function RegisterPage() {
     const fd = new FormData()
     fd.append('fullname', fullname.trim())
     fd.append('email', email.trim())
-    fd.append('username', username.trim())
+    fd.append('username', username.trim().toLowerCase())
     fd.append('password', password)
     fd.append('avatar', avatar)
     if (cover) {
@@ -42,9 +61,20 @@ export function RegisterPage() {
     try {
       const result = await register(fd)
       if (result.ok) {
-        navigate('/login', { replace: true })
+        navigate('/login', {
+          replace: true,
+          state: {
+            registered: true,
+            email: email.trim(),
+            ...(typeof returnTo === 'string' &&
+            returnTo.startsWith('/') ?
+              { from: returnTo }
+            : {}),
+          },
+        })
       } else {
         setError(result.message || 'Registration failed.')
+        setErrorDetails(errorsToLines(result.errors))
       }
     } finally {
       setSubmitting(false)
@@ -54,9 +84,19 @@ export function RegisterPage() {
   return (
     <div className="page page-narrow auth-page">
       <h1 className="page-title">Create account</h1>
-      <p className="muted small">Avatar image is required.</p>
+      <p className="muted small">Avatar required. Cover optional.</p>
 
-      {error ? <ErrorBanner message={error} onDismiss={() => setError(null)} /> : null}
+      {error ?
+        <ErrorBanner
+          message={error}
+          details={errorDetails}
+          onDismiss={() => {
+            setError(null)
+            setErrorDetails(undefined)
+          }}
+        />
+      : null}
+
       <form className="stack-form" onSubmit={(e) => void onSubmit(e)}>
         <Input
           label="Full name"
@@ -79,16 +119,31 @@ export function RegisterPage() {
           autoComplete="username"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
-          hint="Stored lowercase on the server."
+          hint="Saved lowercase."
         />
-        <Input
-          label="Password"
-          name="password"
-          type="password"
-          autoComplete="new-password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
+        <div className="field">
+          <label htmlFor="reg-password">Password</label>
+          <div className="password-field-row">
+            <input
+              id="reg-password"
+              name="password"
+              type={showPassword ? 'text' : 'password'}
+              autoComplete="new-password"
+              className="input password-field-input"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            <button
+              type="button"
+              className="btn secondary small password-toggle"
+              aria-pressed={showPassword}
+              onClick={() => setShowPassword((v) => !v)}
+            >
+              {showPassword ? 'Hide' : 'Show'}
+            </button>
+          </div>
+          <span className="small muted">At least 8 characters.</span>
+        </div>
 
         <div className="field">
           <label htmlFor="reg-avatar">Avatar image</label>
@@ -121,7 +176,17 @@ export function RegisterPage() {
       </form>
 
       <p className="small muted">
-        Already have an account? <Link to="/login">Sign in</Link>
+        Already have an account?{' '}
+        <Link
+          to="/login"
+          state={
+            typeof returnTo === 'string' && returnTo.startsWith('/')
+              ? { from: returnTo }
+              : undefined
+          }
+        >
+          Sign in
+        </Link>
       </p>
     </div>
   )

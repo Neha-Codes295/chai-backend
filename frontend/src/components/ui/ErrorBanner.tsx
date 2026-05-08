@@ -1,13 +1,23 @@
 type Props = {
   message: string
+  details?: string[]
   onDismiss?: () => void
 }
 
-export function ErrorBanner({ message, onDismiss }: Props) {
+export function ErrorBanner({ message, details, onDismiss }: Props) {
   return (
     <div className="alert error" role="alert">
-      <span>{message}</span>
-      {onDismiss ? (
+      <div>
+        <span>{message}</span>
+        {details?.length ?
+          <ul className="error-banner-list">
+            {details.map((d, i) => (
+              <li key={i}>{d}</li>
+            ))}
+          </ul>
+        : null}
+      </div>
+      {onDismiss ?
         <button
           type="button"
           className="link-btn small"
@@ -16,7 +26,7 @@ export function ErrorBanner({ message, onDismiss }: Props) {
         >
           Dismiss
         </button>
-      ) : null}
+      : null}
     </div>
   )
 }
