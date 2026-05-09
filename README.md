@@ -1,19 +1,31 @@
 # Playtube
 
-Monorepo: [`backend/`](backend/) (Express + MongoDB) and [`frontend/`](frontend/) (Vite + React + TypeScript).
+Full-stack video app: **Express + MongoDB** in [`backend/`](backend/), **Vite + React + TypeScript** in [`frontend/`](frontend/).
 
-## Backend
+## What you need
+
+- Node.js (LTS)
+- MongoDB (local or Atlas)
+- [Cloudinary](https://cloudinary.com/) — avatars, video, and thumbnail uploads use it
+
+## Run locally
+
+**API**
 
 ```bash
 cd backend
 npm install
-copy .env.sample .env   # then edit
+```
+
+Copy [`backend/.env.sample`](backend/.env.sample) to `backend/.env`, fill in values, then:
+
+```bash
 npm run dev
 ```
 
-Default API: **http://localhost:8001**. Set **`CORS_ORIGIN=http://localhost:5173`** when the browser calls the API directly (cookies).
+Default: **http://localhost:8001**. Set **`CORS_ORIGIN=http://localhost:5173`** if anything calls the API from the browser on that origin (cookies).
 
-## Frontend
+**UI**
 
 ```bash
 cd frontend
@@ -21,29 +33,32 @@ npm install
 npm run dev
 ```
 
-Dev UI proxies **`/api`** → **`http://localhost:8001`**. Use **`credentials: 'include'`** (already wired) so login cookies work.
+Open **http://localhost:5173**. In dev, **`/api`** is proxied to the backend; auth relies on **cookies** (fetches already use `credentials: 'include'`).
 
-### App features
+## Environment files
 
-- Home feed, search (client filter), watch with comments, likes, subscribe, save to playlist  
-- Register / login / logout (JWT cookies + refresh retry)  
-- Upload video, Studio (stats + manage videos), playlists, channel (playlists + community tweets)  
-- History, liked videos, subscriptions, account settings (profile, avatar, cover, password)
+Do **not** commit real secrets.
 
-**Note:** Channel profile (`GET /users/c/:username`) is protected by the backend JWT middleware — users must be signed in to open channel pages.
+| Path | Notes |
+|------|--------|
+| `backend/.env` | From `.env.sample`. Mongo URI, JWT secrets, Cloudinary, `CORS_ORIGIN`, etc. |
+| `frontend/.env` | Optional. Start from [`frontend/.env.example`](frontend/.env.example). For **production builds**, set **`VITE_API_URL`** to your API base URL (no trailing slash). |
 
-## Environment files (never commit secrets)
+Repo [**`.gitignore`**](.gitignore) ignores `.env` and build artifacts; keep **`.env.sample`** / **`.env.example`** in Git as templates.
 
-- **`backend/.env`** — created locally from [`backend/.env.sample`](backend/.env.sample). Gitignored.
-- **`frontend/.env`** — optional; copy from [`frontend/.env.example`](frontend/.env.example). Gitignored.
+## Frontend status
 
-Tracked templates only: **`.env.sample`** / **`.env.example`**. Root [`.gitignore`](.gitignore) also ignores `*.local` and common build artifacts.
+**Working:** shell (layout, routes, auth guards), register / login / logout, session refresh on failed authed requests (`apiFetchWithRefresh`), home feed of **published** videos with **Load more**, header search as **client-side filter** on already loaded items (`/?q=`).
 
-## Production UI build
+**Still stubs:** watch page (no player yet), upload/studio, channel, playlists, history, subscriptions, settings, etc.
+
+**Backend note:** `GET /api/v1/users/c/:username` is JWT-protected — channel pages expect the user to be signed in unless you change the API.
+
+## Production UI
 
 ```bash
 cd frontend
 npm run build
 ```
 
-Set **`VITE_API_URL`** to your deployed API origin (no trailing slash).
+Output: `frontend/dist/`. Set **`VITE_API_URL`** before building so the app talks to your hosted API.
