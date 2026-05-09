@@ -43,7 +43,7 @@ export function RegisterPage() {
       return
     }
     if (!avatar) {
-      setError('Avatar image is required by the API.')
+      setError('Avatar is required.')
       return
     }
 
