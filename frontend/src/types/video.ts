@@ -28,3 +28,17 @@ export type VideosPageResult = {
   prevPage?: number | null
   nextPage?: number | null
 }
+
+export type VideoDetail = {
+  _id: string
+  title: string
+  description: string
+  videoFile: string
+  thumbnail: string
+  duration: number
+  views?: number
+  isPublished?: boolean
+  createdAt?: string
+  updatedAt?: string
+  owner?: VideoOwner | null
+}
