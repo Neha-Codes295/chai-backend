@@ -1,64 +1,52 @@
 # Playtube
 
-Full-stack video app: **Express + MongoDB** in [`backend/`](backend/), **Vite + React + TypeScript** in [`frontend/`](frontend/).
+Express + MongoDB API in [`backend/`](backend/), Vite + React + TypeScript UI in [`frontend/`](frontend/).
 
-## What you need
+## Prerequisites
 
-- Node.js (LTS)
-- MongoDB (local or Atlas)
-- [Cloudinary](https://cloudinary.com/) — avatars, video, and thumbnail uploads use it
+- Node.js (LTS), MongoDB, [Cloudinary](https://cloudinary.com/) (avatars and media uploads)
 
 ## Run locally
 
-**API**
-
 ```bash
-cd backend
-npm install
+cd backend && npm install
 ```
 
-Copy [`backend/.env.sample`](backend/.env.sample) to `backend/.env`, fill in values, then:
+Copy [`backend/.env.sample`](backend/.env.sample) → `backend/.env`, fill values, then:
 
 ```bash
 npm run dev
 ```
 
-Default: **http://localhost:8001**. Set **`CORS_ORIGIN=http://localhost:5173`** if anything calls the API from the browser on that origin (cookies).
-
-**UI**
+API default: **http://localhost:8001**. Use **`CORS_ORIGIN=http://localhost:5173`** when the browser hits that origin (cookies).
 
 ```bash
-cd frontend
-npm install
-npm run dev
+cd frontend && npm install && npm run dev
 ```
 
-Open **http://localhost:5173**. In dev, **`/api`** is proxied to the backend; auth relies on **cookies** (fetches already use `credentials: 'include'`).
+UI: **http://localhost:5173**. Dev server proxies **`/api`** to the backend; fetches use **`credentials: 'include'`**.
 
-## Environment files
+## Environment
 
-Do **not** commit real secrets.
+Never commit secrets. Templates: **`backend/.env.sample`**, [`frontend/.env.example`](frontend/.env.example). Ignored: `.env`, builds — see [`.gitignore`](.gitignore).
 
-| Path | Notes |
-|------|--------|
-| `backend/.env` | From `.env.sample`. Mongo URI, JWT secrets, Cloudinary, `CORS_ORIGIN`, etc. |
-| `frontend/.env` | Optional. Start from [`frontend/.env.example`](frontend/.env.example). For **production builds**, set **`VITE_API_URL`** to your API base URL (no trailing slash). |
+| File | Role |
+|------|------|
+| `backend/.env` | Mongo URI, JWT secrets, Cloudinary, `PORT`, `CORS_ORIGIN` |
+| `frontend/.env` | Optional in dev. For **`npm run build`**, set **`VITE_API_URL`** (API origin, no trailing slash). |
 
-Repo [**`.gitignore`**](.gitignore) ignores `.env` and build artifacts; keep **`.env.sample`** / **`.env.example`** in Git as templates.
+## UI coverage
 
-## Frontend status
+**Done:** auth (register / login / logout, refresh on 401 via `apiFetchWithRefresh`), home feed + load more + `/?q=` filter on loaded items, watch page (player, description, like when signed in, comments with edit/delete/like, history on first play).
 
-**Working:** shell (layout, routes, auth guards), register / login / logout, session refresh on failed authed requests (`apiFetchWithRefresh`), home feed of **published** videos with **Load more**, header search as **client-side filter** on already loaded items (`/?q=`).
+**Not built yet:** upload/studio, real channel page, playlists, library/settings screens (routes may exist as stubs).
 
-**Still stubs:** watch page (no player yet), upload/studio, channel, playlists, history, subscriptions, settings, etc.
+**Quirks:** video like UI doesn’t know “already liked” until you toggle — `GET /videos/:id` doesn’t include that. Channel JSON route **`GET /users/c/:username`** requires JWT on the backend today.
 
-**Backend note:** `GET /api/v1/users/c/:username` is JWT-protected — channel pages expect the user to be signed in unless you change the API.
-
-## Production UI
+## Production build
 
 ```bash
-cd frontend
-npm run build
+cd frontend && npm run build
 ```
 
-Output: `frontend/dist/`. Set **`VITE_API_URL`** before building so the app talks to your hosted API.
+Output: `frontend/dist/`. Set **`VITE_API_URL`** before building.
