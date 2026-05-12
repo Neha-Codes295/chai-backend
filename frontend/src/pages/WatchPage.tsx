@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthProvider'
+import { addVideoToPlaylist, fetchPlaylistsByUserId } from '../api/playlists'
 import { fetchVideoById } from '../api/videos'
 import { toggleVideoLike } from '../api/likes'
 import { postWatchHistory } from '../api/history'
@@ -12,7 +13,7 @@ import {
   formatViewCount,
 } from '../lib/formatMedia'
 import { CommentSection } from '../components/watch/CommentSection'
-import { Button, EmptyState, Spinner } from '../components/ui'
+import { Button, EmptyState, ErrorBanner, Spinner } from '../components/ui'
 
 function isValidObjectId(id: string | undefined): id is string {
   return Boolean(id && /^[a-f\d]{24}$/i.test(id))
@@ -81,6 +82,14 @@ export function WatchPage() {
   const [likeBusy, setLikeBusy] = useState(false)
   const [subscribed, setSubscribed] = useState<boolean | null>(null)
   const [subBusy, setSubBusy] = useState(false)
+  const [saveModalOpen, setSaveModalOpen] = useState(false)
+  const [myPlaylists, setMyPlaylists] = useState<
+    { _id: string; name: string }[]
+  >([])
+  const [plListLoading, setPlListLoading] = useState(false)
+  const [plListErr, setPlListErr] = useState<string | null>(null)
+  const [addToPlBusyId, setAddToPlBusyId] = useState<string | null>(null)
+  const [saveToast, setSaveToast] = useState<string | null>(null)
 
   const loadVideo = useCallback(async () => {
     if (!isValidObjectId(videoId)) {
@@ -156,6 +165,44 @@ export function WatchPage() {
     if (!user || !video || historySent.current) return
     historySent.current = true
     void postWatchHistory(video._id)
+  }
+
+  async function openSaveModal() {
+    if (!user) return
+    setSaveModalOpen(true)
+    setPlListErr(null)
+    setPlListLoading(true)
+    setMyPlaylists([])
+    const r = await fetchPlaylistsByUserId(user._id)
+    setPlListLoading(false)
+    if (!r.ok || !Array.isArray(r.data)) {
+      setPlListErr(r.message || 'Could not load your playlists.')
+      return
+    }
+    setMyPlaylists(
+      r.data
+        .filter((row) => row && typeof row._id === 'string' && row.name)
+        .map((row) => ({ _id: row._id, name: row.name })),
+    )
+  }
+
+  async function onPickPlaylist(playlistId: string, playlistName: string) {
+    if (!video) return
+    setAddToPlBusyId(playlistId)
+    setPlListErr(null)
+    const r = await addVideoToPlaylist(playlistId, video._id)
+    setAddToPlBusyId(null)
+    if (!r.ok) {
+      setPlListErr(r.message || 'Could not add to playlist.')
+      return
+    }
+    const msg =
+      r.message === 'Video already in playlist' ?
+        `Already in “${playlistName}”.`
+      : `Saved to “${playlistName}”.`
+    setSaveToast(msg)
+    setSaveModalOpen(false)
+    window.setTimeout(() => setSaveToast(null), 4000)
   }
 
   if (!isValidObjectId(videoId)) {
@@ -255,6 +302,14 @@ export function WatchPage() {
               >
                 {likeBusy ? '…' : liked ? 'Liked' : 'Like'}
               </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={!video}
+                onClick={() => void openSaveModal()}
+              >
+                Save
+              </Button>
               {!isOwner && video.owner?._id ?
                 <Button
                   type="button"
@@ -278,11 +333,94 @@ export function WatchPage() {
         </div>
       </div>
 
+      {saveToast ?
+        <p className="muted small" role="status" style={{ margin: '0 0 0.75rem' }}>
+          {saveToast}
+        </p>
+      : null}
+
       <div className="description-card">
         <p className="description-text">{video.description}</p>
       </div>
 
       <CommentSection videoId={video._id} user={user} />
+
+      {saveModalOpen ?
+        <div
+          className="modal-backdrop"
+          role="presentation"
+          onClick={() => !addToPlBusyId && setSaveModalOpen(false)}
+        >
+          <div
+            className="modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="watch-save-pl-title"
+            onClick={(ev) => ev.stopPropagation()}
+          >
+            <h2
+              id="watch-save-pl-title"
+              className="page-title"
+              style={{ fontSize: '1.1rem' }}
+            >
+              Save to playlist
+            </h2>
+            <p className="muted small" style={{ margin: '0.5rem 0 0.75rem' }}>
+              Choose one of your playlists. You can create more from your channel’s
+              Playlists tab.
+            </p>
+            {plListErr ?
+              <ErrorBanner message={plListErr} onDismiss={() => setPlListErr(null)} />
+            : null}
+            {plListLoading ?
+              <Spinner label="Loading playlists…" />
+            : myPlaylists.length === 0 && !plListErr ?
+              <EmptyState
+                title="No playlists yet"
+                description="Create a playlist on your channel, then try again."
+                action={
+                  user ?
+                    <Link
+                      className="nav-pill accent"
+                      to={`/channel/${encodeURIComponent(user.username)}?tab=playlists`}
+                      onClick={() => setSaveModalOpen(false)}
+                    >
+                      My playlists
+                    </Link>
+                  : null
+                }
+              />
+            : (
+              <ul className="save-pl-picker">
+                {myPlaylists.map((pl) => (
+                  <li key={pl._id}>
+                    <button
+                      type="button"
+                      className="save-pl-row"
+                      disabled={Boolean(addToPlBusyId)}
+                      onClick={() => void onPickPlaylist(pl._id, pl.name)}
+                    >
+                      {addToPlBusyId === pl._id ?
+                        'Saving…'
+                      : pl.name}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className="modal-actions">
+              <Button
+                type="button"
+                variant="ghost"
+                disabled={Boolean(addToPlBusyId)}
+                onClick={() => setSaveModalOpen(false)}
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      : null}
 
       <p className="pager">
         <Link to="/">← Home</Link>

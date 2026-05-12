@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { fetchDashboardStats, type DashboardStats } from '../api/dashboard'
+import { useAuth } from '../context/AuthProvider'
 import {
   deleteVideoApi,
   fetchMyVideosPage,
@@ -75,6 +76,7 @@ function detailToRow(v: VideoDetail): StudioRow {
 }
 
 export function StudioPage() {
+  const { user } = useAuth()
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [statsLoading, setStatsLoading] = useState(true)
 
@@ -229,9 +231,19 @@ export function StudioPage() {
     <div className="page">
       <div className="studio-head">
         <h1 className="page-title">Studio</h1>
-        <Link to="/upload" className="btn accent">
-          Upload
-        </Link>
+        <div className="studio-head-actions">
+          {user?.username ?
+            <Link
+              to={`/channel/${encodeURIComponent(user.username)}?tab=playlists`}
+              className="btn secondary"
+            >
+              Playlists
+            </Link>
+          : null}
+          <Link to="/upload" className="btn accent">
+            Upload
+          </Link>
+        </div>
       </div>
 
       {statsLoading ?

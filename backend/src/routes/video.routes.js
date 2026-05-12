@@ -1,4 +1,4 @@
-// /api/v1/videos — order: /my and /:id/publish before /:videoId so paths match right.
+// Route order: /my and /:videoId/publish before /:videoId (never use /videos/:literal paths).
 import { Router } from "express"
 import {
     getAllVideos,
@@ -14,16 +14,15 @@ import { optionalAuth, verifyJWT } from "../middlewares/auth.middleware.js"
 
 const router = Router()
 
-router.route("/").get(getAllVideos) // public home list
+router.route("/").get(getAllVideos)
 
-router.route("/my").get(verifyJWT, getMyVideos) // only my uploads (paged)
+router.route("/my").get(verifyJWT, getMyVideos)
 
-// Draft/public flip; must be more specific than plain /:videoId
 router
     .route("/:videoId/publish")
     .patch(verifyJWT, togglePublishStatus)
 
-router.route("/:videoId").get(optionalAuth, getVideoById) // guest ok; owner can see draft
+router.route("/:videoId").get(optionalAuth, getVideoById)
 
 router.route("/").post(
     verifyJWT,

@@ -21,6 +21,22 @@ export async function fetchVideosPage(
   return readApiResponse<VideosPageResult>(res)
 }
 
+export async function fetchChannelVideosPage(
+  username: string,
+  page: number,
+  limit: number = DEFAULT_LIMIT,
+): Promise<{ ok: boolean; data?: VideosPageResult; message?: string }> {
+  const clampedLimit = Math.min(50, Math.max(1, limit))
+  const safePage = Math.max(1, page)
+  const qs = new URLSearchParams({
+    page: String(safePage),
+    limit: String(clampedLimit),
+    channelUsername: username.trim().toLowerCase(),
+  })
+  const res = await apiFetchWithRefresh(`/api/v1/videos?${qs}`)
+  return readApiResponse<VideosPageResult>(res)
+}
+
 export async function fetchVideoById(
   videoId: string,
 ): Promise<{ ok: boolean; data?: VideoDetail; message?: string }> {

@@ -1,6 +1,7 @@
 import { asyncHandler } from "../utils/asyncHandler.js"
 import { ApiError } from "../utils/ApiError.js"
 import { Video } from "../models/video.model.js"
+import { User } from "../models/user.model.js"
 import { uploadOnCloudinary, deleteFromCloudinary } from "../utils/cloudinary.js"
 import { ApiResponse } from "../utils/ApiResponse.js"
 import mongoose from "mongoose"
@@ -8,8 +9,29 @@ import mongoose from "mongoose"
 const getAllVideos = asyncHandler(async (req, res) => {
     const page = Math.max(1, parseInt(req.query.page, 10) || 1)
     const limit = Math.min(50, Math.max(1, parseInt(req.query.limit, 10) || 10))
+    const channelUsername = String(
+        req.query.channelUsername ?? req.query.channel ?? "",
+    )
+        .trim()
+        .toLowerCase()
+
+    let match
+    if (channelUsername) {
+        const owner = await User.findOne({ username: channelUsername }).select("_id").lean()
+        if (!owner) {
+            throw new ApiError(404, "Channel not found")
+        }
+        const ownerOid = new mongoose.Types.ObjectId(String(owner._id))
+        match = {
+            owner: ownerOid,
+            $nor: [{ isPublished: false }],
+        }
+    } else {
+        match = { isPublished: true }
+    }
+
     const aggregate = Video.aggregate([
-        { $match: { isPublished: true } },
+        { $match: match },
         {
             $lookup: {
                 from: "users",
@@ -151,7 +173,6 @@ const getMyVideos = asyncHandler(async (req, res) => {
         .json(new ApiResponse(200, result, "Your videos"))
 })
 
-// Draft vs public: flip isPublished. Only the video owner can do this.
 const togglePublishStatus = asyncHandler(async (req, res) => {
     const { videoId } = req.params
     if (!mongoose.isValidObjectId(videoId)) {
@@ -164,7 +185,6 @@ const togglePublishStatus = asyncHandler(async (req, res) => {
     if (String(video.owner) !== String(req.user._id)) {
         throw new ApiError(403, "Not allowed to change publish status")
     }
-    // true <-> false in one step (no body needed).
     video.isPublished = !video.isPublished
     await video.save()
     const out = await Video.findById(videoId)
@@ -175,4 +195,12 @@ const togglePublishStatus = asyncHandler(async (req, res) => {
         .json(new ApiResponse(200, out, "Publish status updated"))
 })
 
-export { getAllVideos, getVideoById, publishVideo, updateVideo, deleteVideo, getMyVideos, togglePublishStatus }
+export {
+    getAllVideos,
+    getVideoById,
+    publishVideo,
+    updateVideo,
+    deleteVideo,
+    getMyVideos,
+    togglePublishStatus,
+}
