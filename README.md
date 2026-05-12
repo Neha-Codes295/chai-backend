@@ -37,9 +37,9 @@ Never commit secrets. Templates: **`backend/.env.sample`**, [`frontend/.env.exam
 
 ## UI coverage
 
-**Done:** auth (register / login / logout, refresh on 401 via `apiFetchWithRefresh`), home feed + load more + `/?q=` filter on loaded items, watch page (player, description, like when signed in, comments with edit/delete/like, history on first play), **upload**, **studio** (stats, my videos, publish toggle, edit, delete, load more).
+**Done:** auth (register / login / logout, refresh on 401 via `apiFetchWithRefresh`), home feed + load more + `/?q=` filter on loaded items, watch page (player, description, like when signed in, comments with edit/delete/like, history on first play), **watch history** (`/history`), **liked videos** (`/liked` + load more), **subscriptions** (`/subscriptions` + unfollow), **settings** (profile, password, avatar & cover uploads), **upload**, **studio** (stats, my videos, publish toggle, edit, delete, load more).
 
-**Not built yet:** real channel page, playlists, library/settings screens (routes may exist as stubs).
+**Not built yet:** real channel page, playlists (routes may exist as stubs).
 
 **Quirks:** video like UI doesn’t know “already liked” until you toggle — `GET /videos/:id` doesn’t include that. Channel JSON route **`GET /users/c/:username`** requires JWT on the backend today.
 

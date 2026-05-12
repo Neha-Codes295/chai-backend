@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthProvider'
 import { fetchVideoById } from '../api/videos'
 import { toggleVideoLike } from '../api/likes'
 import { postWatchHistory } from '../api/history'
+import { fetchSubscribedChannels, toggleSubscription } from '../api/subscriptions'
 import type { VideoDetail } from '../types/video'
 import {
   formatDuration,
@@ -78,6 +79,8 @@ export function WatchPage() {
   const [error, setError] = useState<string | null>(null)
   const [liked, setLiked] = useState(false)
   const [likeBusy, setLikeBusy] = useState(false)
+  const [subscribed, setSubscribed] = useState<boolean | null>(null)
+  const [subBusy, setSubBusy] = useState(false)
 
   const loadVideo = useCallback(async () => {
     if (!isValidObjectId(videoId)) {
@@ -105,6 +108,30 @@ export function WatchPage() {
     void loadVideo()
   }, [loadVideo])
 
+  const isOwner =
+    Boolean(user && video?.owner?._id && String(video.owner._id) === String(user._id))
+
+  useEffect(() => {
+    if (!user || !video?.owner?._id || isOwner) {
+      setSubscribed(null)
+      return
+    }
+    let cancelled = false
+    ;(async () => {
+      const r = await fetchSubscribedChannels()
+      if (cancelled) return
+      if (r.ok && Array.isArray(r.data)) {
+        const sid = String(video.owner!._id)
+        setSubscribed(r.data.some((row) => String(row.channel?._id) === sid))
+      } else {
+        setSubscribed(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [user, video?.owner?._id, video?._id, isOwner])
+
   async function onToggleLike() {
     if (!user || !video) return
     setLikeBusy(true)
@@ -113,6 +140,16 @@ export function WatchPage() {
       setLiked(r.data.liked)
     }
     setLikeBusy(false)
+  }
+
+  async function onToggleSubscribe() {
+    if (!user || !video?.owner?._id) return
+    setSubBusy(true)
+    const r = await toggleSubscription(String(video.owner._id))
+    if (r.ok && r.data && typeof r.data.subscribed === 'boolean') {
+      setSubscribed(r.data.subscribed)
+    }
+    setSubBusy(false)
   }
 
   function onVideoPlay() {
@@ -159,9 +196,6 @@ export function WatchPage() {
       </div>
     )
   }
-
-  const isOwner =
-    Boolean(user && video.owner?._id && String(video.owner._id) === String(user._id))
 
   return (
     <div className="page watch-layout">
@@ -212,17 +246,33 @@ export function WatchPage() {
         </div>
         <div className="watch-btns">
           {user ?
-            <Button
-              type="button"
-              variant={liked ? 'secondary' : 'accent'}
-              disabled={likeBusy}
-              onClick={() => void onToggleLike()}
-            >
-              {likeBusy ? '…' : liked ? 'Liked' : 'Like'}
-            </Button>
+            <>
+              <Button
+                type="button"
+                variant={liked ? 'secondary' : 'accent'}
+                disabled={likeBusy}
+                onClick={() => void onToggleLike()}
+              >
+                {likeBusy ? '…' : liked ? 'Liked' : 'Like'}
+              </Button>
+              {!isOwner && video.owner?._id ?
+                <Button
+                  type="button"
+                  variant={subscribed ? 'secondary' : 'accent'}
+                  disabled={subBusy || subscribed === null}
+                  onClick={() => void onToggleSubscribe()}
+                >
+                  {subBusy ? '…'
+                  : subscribed === null ? '…'
+                  : subscribed ?
+                    'Subscribed'
+                  : 'Subscribe'}
+                </Button>
+              : null}
+            </>
           : (
             <Link to="/login" className="nav-pill ghost">
-              Sign in to like
+              Sign in to like or subscribe
             </Link>
           )}
         </div>

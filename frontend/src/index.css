@@ -981,6 +981,41 @@ img {
   object-fit: cover;
 }
 
+.sub-avatar-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.sub-meta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.sub-name-link {
+  font-weight: 600;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.sub-name-link:hover {
+  text-decoration: underline;
+}
+
+.sub-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+}
+
 .settings-block {
   margin-bottom: 2rem;
   padding-bottom: 1.5rem;

@@ -5,58 +5,8 @@ import { fetchVideosPage } from '../api/videos'
 import { VideoCard } from '../components/VideoCard'
 import { VideoGridSkeleton } from '../components/VideoGridSkeleton'
 import { Button, EmptyState, ErrorBanner } from '../components/ui'
+import { normalizeVideoDocs } from '../lib/videoSummary'
 import type { VideoSummary } from '../types/video'
-
-function normalizeDoc(raw: unknown): VideoSummary | null {
-  if (!raw || typeof raw !== 'object') return null
-  const v = raw as Record<string, unknown>
-  const id = v._id
-  const title = v.title
-  const thumbnail = v.thumbnail
-  const durationRaw = v.duration
-  const durationNum =
-    typeof durationRaw === 'number' ? durationRaw : Number(durationRaw)
-  if (
-    (typeof id !== 'string' && typeof id !== 'number') ||
-    typeof title !== 'string' ||
-    typeof thumbnail !== 'string' ||
-    !Number.isFinite(durationNum)
-  ) {
-    return null
-  }
-  let owner: VideoSummary['owner'] = null
-  const o = v.owner
-  if (o && typeof o === 'object') {
-    const ow = o as Record<string, unknown>
-    owner = {
-      _id:
-        typeof ow._id === 'string' ? ow._id
-        : ow._id != null ? String(ow._id)
-        : undefined,
-      fullname: typeof ow.fullname === 'string' ? ow.fullname : undefined,
-      username: typeof ow.username === 'string' ? ow.username : undefined,
-      avatar: typeof ow.avatar === 'string' ? ow.avatar : undefined,
-    }
-  }
-  return {
-    _id: String(id),
-    title,
-    thumbnail,
-    duration: durationNum,
-    views: typeof v.views === 'number' ? v.views : undefined,
-    createdAt: typeof v.createdAt === 'string' ? v.createdAt : undefined,
-    owner,
-  }
-}
-
-function normalizeDocs(docs: unknown[]): VideoSummary[] {
-  const out: VideoSummary[] = []
-  for (const d of docs) {
-    const n = normalizeDoc(d)
-    if (n) out.push(n)
-  }
-  return out
-}
 
 function matchesQuery(video: VideoSummary, q: string): boolean {
   const n = q.trim().toLowerCase()
@@ -90,7 +40,7 @@ export function HomePage() {
       setHasNextPage(false)
       setTotalDocs(null)
     } else {
-      const docs = normalizeDocs(r.data.docs as unknown[])
+      const docs = normalizeVideoDocs(r.data.docs as unknown[])
       setItems(docs)
       setPage(r.data.page)
       setHasNextPage(Boolean(r.data.hasNextPage))
@@ -114,7 +64,7 @@ export function HomePage() {
       setLoadingMore(false)
       return
     }
-    const incoming = normalizeDocs(r.data.docs as unknown[])
+    const incoming = normalizeVideoDocs(r.data.docs as unknown[])
     setItems((prev) => {
       const seen = new Set(prev.map((x) => x._id))
       const merged = [...prev]
