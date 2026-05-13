@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { fetchWatchHistory } from '../api/history'
+import { LibraryNav } from '../components/LibraryNav'
 import { VideoCard } from '../components/VideoCard'
 import { VideoGridSkeleton } from '../components/VideoGridSkeleton'
 import { Button, EmptyState, ErrorBanner } from '../components/ui'
-import { normalizeVideoDocs } from '../lib/videoSummary'
+import { dedupeVideoSummariesById, normalizeVideoDocs } from '../lib/videoSummary'
 import type { VideoSummary } from '../types/video'
 
 export function HistoryPage() {
@@ -20,7 +21,7 @@ export function HistoryPage() {
       setError(r.message || 'Could not load watch history.')
       setItems([])
     } else {
-      setItems(normalizeVideoDocs(r.data))
+      setItems(dedupeVideoSummariesById(normalizeVideoDocs(r.data)))
     }
     setLoading(false)
   }, [])
@@ -31,7 +32,25 @@ export function HistoryPage() {
 
   return (
     <div className="page">
-      <h1 className="page-title">Watch history</h1>
+      <LibraryNav />
+      <div className="library-page-head">
+        <h1 className="page-title">Watch history</h1>
+        <Button
+          type="button"
+          variant="secondary"
+          disabled={loading}
+          onClick={() => void load()}
+        >
+          {loading ? 'Refreshing…' : 'Refresh'}
+        </Button>
+      </div>
+
+      {!loading && items.length > 0 ?
+        <p className="muted small">
+          {items.length} unique video{items.length === 1 ? '' : 's'} (newest first
+          in your list).
+        </p>
+      : null}
 
       {error ?
         <ErrorBanner message={error} onDismiss={() => setError(null)} />

@@ -5,7 +5,11 @@ import { addVideoToPlaylist, fetchPlaylistsByUserId } from '../api/playlists'
 import { fetchVideoById } from '../api/videos'
 import { toggleVideoLike } from '../api/likes'
 import { postWatchHistory } from '../api/history'
-import { fetchSubscribedChannels, toggleSubscription } from '../api/subscriptions'
+import {
+  fetchSubscribedChannels,
+  getSubscriptionChannelId,
+  toggleSubscription,
+} from '../api/subscriptions'
 import type { VideoDetail } from '../types/video'
 import {
   formatDuration,
@@ -131,7 +135,9 @@ export function WatchPage() {
       if (cancelled) return
       if (r.ok && Array.isArray(r.data)) {
         const sid = String(video.owner!._id)
-        setSubscribed(r.data.some((row) => String(row.channel?._id) === sid))
+        setSubscribed(
+          r.data.some((row) => getSubscriptionChannelId(row) === sid),
+        )
       } else {
         setSubscribed(false)
       }

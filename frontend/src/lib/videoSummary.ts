@@ -50,3 +50,24 @@ export function normalizeVideoDocs(docs: unknown[]): VideoSummary[] {
   }
   return out
 }
+
+export function dedupeVideoSummariesById(videos: VideoSummary[]): VideoSummary[] {
+  const seen = new Set<string>()
+  const out: VideoSummary[] = []
+  for (const v of videos) {
+    if (seen.has(v._id)) continue
+    seen.add(v._id)
+    out.push(v)
+  }
+  return out
+}
+
+export function sortVideoSummariesByDateDesc(
+  videos: VideoSummary[],
+): VideoSummary[] {
+  return [...videos].sort((a, b) => {
+    const ta = a.createdAt ? Date.parse(a.createdAt) : 0
+    const tb = b.createdAt ? Date.parse(b.createdAt) : 0
+    return tb - ta
+  })
+}

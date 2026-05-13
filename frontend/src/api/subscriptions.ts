@@ -9,7 +9,15 @@ export type SubscriptionChannel = {
 
 export type SubscriptionRow = {
   _id: string
-  channel?: SubscriptionChannel | null
+  channel?: SubscriptionChannel | string | null
+}
+
+export function getSubscriptionChannelId(row: SubscriptionRow): string | null {
+  const ch = row.channel
+  if (!ch) return null
+  if (typeof ch === 'string' && ch.trim()) return ch.trim()
+  if (typeof ch === 'object' && ch._id != null) return String(ch._id)
+  return null
 }
 
 export async function fetchSubscribedChannels(): Promise<{

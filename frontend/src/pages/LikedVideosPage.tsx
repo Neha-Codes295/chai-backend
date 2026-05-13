@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { fetchLikedVideosPage } from '../api/likes'
+import { LibraryNav } from '../components/LibraryNav'
 import { VideoCard } from '../components/VideoCard'
 import { VideoGridSkeleton } from '../components/VideoGridSkeleton'
 import { Button, EmptyState, ErrorBanner } from '../components/ui'
@@ -69,6 +70,7 @@ export function LikedVideosPage() {
 
   return (
     <div className="page">
+      <LibraryNav />
       <h1 className="page-title">Liked videos</h1>
       {!loadingInitial && total > 0 ?
         <p className="muted small">
