@@ -7,11 +7,18 @@ import { ApiResponse } from "../utils/ApiResponse.js"
 import jwt from "jsonwebtoken"
 import mongoose from "mongoose"
 
-const cookieOptions = {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
+// Split hosting (e.g. Vercel FE + Render BE) = cross-site fetch → set COOKIE_SAMESITE=none (HTTPS required).
+// Same registrable domain for app + API can use lax (default).
+function buildCookieOptions() {
+    const raw = process.env.COOKIE_SAMESITE?.toLowerCase()?.trim()
+    const sameSite =
+        raw === "none" || raw === "strict" || raw === "lax" ? raw : "lax"
+    const secure =
+        sameSite === "none" ? true : process.env.NODE_ENV === "production"
+    return { httpOnly: true, secure, sameSite }
 }
+
+const cookieOptions = buildCookieOptions()
 
 const generateAccessAndRefreshTokens = async (userId) => {
     try {

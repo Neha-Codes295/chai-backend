@@ -1,6 +1,6 @@
 # Playtube frontend
 
-Vite + React + TypeScript. Run instructions and env notes are in the repo root `README.md`.
+Vite + React + TypeScript SPA. **Full setup, features, and production notes** are in the [repository root README](../README.md).
 
 ```bash
 npm install

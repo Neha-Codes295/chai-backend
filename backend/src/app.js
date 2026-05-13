@@ -15,6 +15,9 @@ import { ApiError } from "./utils/ApiError.js";
 
 const app = express();
 
+// Correct TLS / client IP when behind Render, Fly, Railway, etc.
+app.set("trust proxy", 1);
+
 app.use(
   cors({
     origin: process.env.CORS_ORIGIN,

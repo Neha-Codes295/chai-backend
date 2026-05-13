@@ -1,8 +1,8 @@
-# Playtube
+# Playtube backend
 
-Node API and Vite/React frontend for this project. Run installs and dev servers from this folder unless noted below.
+Express + MongoDB API for Playtube. **Full setup, env tables, and architecture** live in the [repository root README](../README.md).
 
-## Backend API
+## Quick commands
 
 ```bash
 cp .env.sample .env   # then edit values
@@ -10,18 +10,4 @@ npm install
 npm run dev
 ```
 
-Place `.env` next to `package.json`. Paths like `public/temp` assume the current working directory is this folder.
-
-Deployment: point your host **root directory** here (or run `npm install && npm run dev` after `cd` into this folder).
-
-## Frontend
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-## Notes
-
-Original backend tutorial series: *chai aur backend* (JavaScript backend).
+Run these from **`backend/`** (working directory matters for paths such as `public/temp`).
