@@ -15,8 +15,21 @@
 
 ---
 
+## Live deployment
+
+| | Link |
+|---|------|
+| **Frontend** (Vercel — main app) | [**https://playtube-six.vercel.app/**](https://playtube-six.vercel.app/) |
+| **Backend API** (Render — Express) | [**https://playtube-7nj8.onrender.com**](https://playtube-7nj8.onrender.com) |
+| **API health check** | [`/api/v1/healthcheck`](https://playtube-7nj8.onrender.com/api/v1/healthcheck) |
+
+The production SPA is built with **`VITE_API_URL`** pointing at the Render origin above. The API serves routes under **`/api/v1/...`** only; visiting the API **root** (`/`) may show `Cannot GET /` — that is expected. Use the [health check](https://playtube-7nj8.onrender.com/api/v1/healthcheck) link to confirm the server is responding.
+
+---
+
 ## Contents
 
+- [Live deployment](#live-deployment)
 - [Overview](#overview)
 - [Features](#features)
 - [Architecture](#architecture)
@@ -186,6 +199,7 @@ Template: [`frontend/.env.example`](frontend/.env.example).
 | Location | Command | Description |
 |----------|---------|-------------|
 | `backend/` | `npm run dev` | Nodemon + Express with `dotenv` |
+| `backend/` | `npm start` | Production start (e.g. Render) |
 | `frontend/` | `npm run dev` | Vite dev server |
 | `frontend/` | `npm run build` | Typecheck + production bundle → `dist/` |
 | `frontend/` | `npm run preview` | Serve `dist/` locally |
@@ -197,11 +211,13 @@ Template: [`frontend/.env.example`](frontend/.env.example).
 
 ```bash
 cd frontend
-set VITE_API_URL=https://your-api.example.com   # Windows PowerShell: $env:VITE_API_URL="..."
+set VITE_API_URL=https://playtube-7nj8.onrender.com
 npm run build
 ```
 
-Deploy **`frontend/dist/`** behind your static host and point **`VITE_API_URL`** at the live API. Ensure **`CORS_ORIGIN`** on the server matches the exact origin users load the SPA from, or cookies will not stick.
+On **PowerShell**, use `$env:VITE_API_URL="https://playtube-7nj8.onrender.com"` instead of `set`.
+
+Deploy **`frontend/dist/`** behind your static host. Production uses **`VITE_API_URL=https://playtube-7nj8.onrender.com`** (no trailing slash). Ensure **`CORS_ORIGIN`** on Render matches **`https://playtube-six.vercel.app`** (exact origin, no path), or cookies and CORS will fail.
 
 ---
 
