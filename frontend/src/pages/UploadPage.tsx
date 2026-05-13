@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { uploadVideo } from '../api/videos'
+import { PageTitle } from '../components/PageTitle'
 import { Button, ErrorBanner, Input } from '../components/ui'
 
 export function UploadPage() {
@@ -55,6 +56,7 @@ export function UploadPage() {
 
   return (
     <div className="page">
+      <PageTitle title="Upload" />
       <h1 className="page-title">Upload</h1>
       <p className="muted small" style={{ maxWidth: '560px' }}>
         Files go to Cloudinary. Large uploads can take a minute — keep this tab open.

@@ -52,7 +52,6 @@ export async function createPlaylist(body: {
   return readApiResponse<PlaylistListItem>(res)
 }
 
-/** Owner only. Idempotent if the video is already in the playlist. */
 export async function addVideoToPlaylist(
   playlistId: string,
   videoId: string,
@@ -73,4 +72,28 @@ export async function removeVideoFromPlaylist(
     { method: 'DELETE' },
   )
   return readApiResponse<PlaylistListItem>(res)
+}
+
+export async function updatePlaylistMeta(
+  playlistId: string,
+  body: { name?: string; description?: string },
+): Promise<{ ok: boolean; message?: string }> {
+  const res = await apiFetchWithRefresh(
+    `/api/v1/playlists/${encodeURIComponent(playlistId)}`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    },
+  )
+  return readApiResponse<unknown>(res)
+}
+
+export async function deletePlaylistApi(
+  playlistId: string,
+): Promise<{ ok: boolean; message?: string }> {
+  const res = await apiFetchWithRefresh(
+    `/api/v1/playlists/${encodeURIComponent(playlistId)}`,
+    { method: 'DELETE' },
+  )
+  return readApiResponse<unknown>(res)
 }

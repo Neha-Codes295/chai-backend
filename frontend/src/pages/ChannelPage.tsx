@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { fetchChannelProfile, type ChannelProfile } from '../api/channels'
 import {
@@ -8,15 +8,24 @@ import {
 } from '../api/playlists'
 import { fetchChannelVideosPage } from '../api/videos'
 import { toggleSubscription } from '../api/subscriptions'
+import {
+  createTweet,
+  deleteTweetApi,
+  fetchUserTweetsPage,
+  type TweetItem,
+} from '../api/tweets'
 import { useAuth } from '../context/AuthProvider'
+import { useToast } from '../context/ToastProvider'
+import { PageTitle } from '../components/PageTitle'
 import { VideoCard } from '../components/VideoCard'
 import { Button, EmptyState, ErrorBanner, Input, Spinner } from '../components/ui'
 import { normalizeVideoDocs } from '../lib/videoSummary'
 import type { VideoSummary } from '../types/video'
 
 const VIDEO_PAGE_LIMIT = 12
+const TWEET_PAGE_LIMIT = 10
 
-type Tab = 'videos' | 'playlists'
+type Tab = 'videos' | 'playlists' | 'community'
 
 function playlistFromDoc(raw: unknown): PlaylistListItem | null {
   if (!raw || typeof raw !== 'object') return null
@@ -41,16 +50,22 @@ function playlistFromDoc(raw: unknown): PlaylistListItem | null {
 
 export function ChannelPage() {
   const { username: usernameParam } = useParams<{ username: string }>()
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { user } = useAuth()
+  const { pushToast } = useToast()
   const cleanUsername = (usernameParam ?? '').replace(/^@/, '').trim().toLowerCase()
 
-  const tabFromUrl: Tab = searchParams.get('tab') === 'playlists' ? 'playlists' : 'videos'
-  const [tab, setTab] = useState<Tab>(tabFromUrl)
-
-  useEffect(() => {
-    setTab(searchParams.get('tab') === 'playlists' ? 'playlists' : 'videos')
+  const tab = useMemo<Tab>(() => {
+    const t = searchParams.get('tab')
+    if (t === 'playlists') return 'playlists'
+    if (t === 'community') return 'community'
+    return 'videos'
   }, [searchParams])
+
+  function goTab(next: Tab) {
+    if (next === 'videos') setSearchParams({}, { replace: true })
+    else setSearchParams({ tab: next }, { replace: true })
+  }
   const [profile, setProfile] = useState<ChannelProfile | null>(null)
   const [playlists, setPlaylists] = useState<PlaylistListItem[]>([])
   const [items, setItems] = useState<VideoSummary[]>([])
@@ -69,6 +84,15 @@ export function ChannelPage() {
   const [plDesc, setPlDesc] = useState('')
   const [plSaving, setPlSaving] = useState(false)
   const [plErr, setPlErr] = useState<string | null>(null)
+
+  const [tweets, setTweets] = useState<TweetItem[]>([])
+  const [tweetPage, setTweetPage] = useState(1)
+  const [tweetTotal, setTweetTotal] = useState(0)
+  const [tweetsLoading, setTweetsLoading] = useState(false)
+  const [tweetsLoadMore, setTweetsLoadMore] = useState(false)
+  const [tweetsErr, setTweetsErr] = useState<string | null>(null)
+  const [newTweet, setNewTweet] = useState('')
+  const [tweetPostBusy, setTweetPostBusy] = useState(false)
 
   const load = useCallback(async () => {
     if (!cleanUsername) {
@@ -158,6 +182,90 @@ export function ChannelPage() {
     setLoadingMore(false)
   }, [cleanUsername, hasNextVideo, loadingMore, loading, videoPage])
 
+  useEffect(() => {
+    if (tab !== 'community' || !profile?._id) return
+    setTweetsErr(null)
+    setTweetsLoading(true)
+    void (async () => {
+      const r = await fetchUserTweetsPage(String(profile._id), 1, TWEET_PAGE_LIMIT)
+      setTweetsLoading(false)
+      if (!r.ok || !r.data) {
+        setTweetsErr(r.message || 'Could not load community posts.')
+        setTweets([])
+        setTweetPage(1)
+        setTweetTotal(0)
+        return
+      }
+      const list = Array.isArray(r.data.data) ? r.data.data : []
+      setTweets(list)
+      setTweetPage(r.data.page)
+      setTweetTotal(typeof r.data.total === 'number' ? r.data.total : list.length)
+    })()
+  }, [tab, profile?._id])
+
+  const loadMoreTweets = useCallback(async () => {
+    if (!profile?._id || tweetsLoadMore || tweetsLoading) return
+    if (tweets.length >= tweetTotal) return
+    setTweetsLoadMore(true)
+    setTweetsErr(null)
+    const next = tweetPage + 1
+    const r = await fetchUserTweetsPage(String(profile._id), next, TWEET_PAGE_LIMIT)
+    setTweetsLoadMore(false)
+    if (!r.ok || !r.data) {
+      setTweetsErr(r.message || 'Could not load more posts.')
+      return
+    }
+    const incoming = Array.isArray(r.data.data) ? r.data.data : []
+    setTweets((prev) => {
+      const seen = new Set(prev.map((x) => String(x._id)))
+      const merged = [...prev]
+      for (const t of incoming) {
+        const id = String(t._id)
+        if (!seen.has(id)) {
+          seen.add(id)
+          merged.push(t)
+        }
+      }
+      return merged
+    })
+    setTweetPage(r.data.page)
+    if (typeof r.data.total === 'number') setTweetTotal(r.data.total)
+  }, [profile?._id, tweetPage, tweetTotal, tweets.length, tweetsLoadMore, tweetsLoading])
+
+  async function onPostTweet(e: FormEvent) {
+    e.preventDefault()
+    const text = newTweet.trim()
+    if (!text) return
+    setTweetPostBusy(true)
+    setTweetsErr(null)
+    const r = await createTweet(text)
+    setTweetPostBusy(false)
+    if (!r.ok || !r.data) {
+      const msg = r.message || 'Could not post.'
+      setTweetsErr(msg)
+      pushToast(msg, 'error')
+      return
+    }
+    setNewTweet('')
+    setTweets((prev) => [r.data!, ...prev])
+    setTweetTotal((n) => n + 1)
+    pushToast('Post published.', 'success')
+  }
+
+  async function onDeleteTweet(tweetId: string) {
+    setTweetsErr(null)
+    const r = await deleteTweetApi(tweetId)
+    if (!r.ok) {
+      const msg = r.message || 'Could not delete post.'
+      setTweetsErr(msg)
+      pushToast(msg, 'error')
+      return
+    }
+    setTweets((prev) => prev.filter((t) => String(t._id) !== tweetId))
+    setTweetTotal((n) => Math.max(0, n - 1))
+    pushToast('Post removed.', 'info')
+  }
+
   const isOwner =
     Boolean(user && profile && String(user._id) === String(profile._id))
 
@@ -199,6 +307,7 @@ export function ChannelPage() {
   if (!cleanUsername) {
     return (
       <div className="page">
+        <PageTitle title="Channel" />
         <EmptyState
           title="Invalid channel"
           description="Missing username in the URL."
@@ -211,6 +320,7 @@ export function ChannelPage() {
   if (loading) {
     return (
       <div className="page page-center">
+        <PageTitle title="Channel" />
         <Spinner center label="Loading channel…" />
       </div>
     )
@@ -219,6 +329,7 @@ export function ChannelPage() {
   if (error || !profile) {
     return (
       <div className="page">
+        <PageTitle title="Channel" />
         {error ?
           <ErrorBanner message={error} onDismiss={() => setError(null)} />
         : null}
@@ -243,6 +354,7 @@ export function ChannelPage() {
 
   return (
     <div className="page channel-page">
+      <PageTitle title={displayName} />
       <div
         className="channel-banner"
         style={
@@ -254,7 +366,11 @@ export function ChannelPage() {
 
       <div className="channel-bar">
         {profile.avatar ?
-          <img src={profile.avatar} alt="" className="channel-avatar" />
+          <img
+            src={profile.avatar}
+            alt={`${displayName} channel avatar`}
+            className="channel-avatar"
+          />
         : (
           <div
             className="channel-avatar"
@@ -307,22 +423,33 @@ export function ChannelPage() {
         </div>
       </div>
 
-      <div className="tabs" role="tablist">
+      <div className="tabs" role="tablist" aria-label="Channel sections">
         <button
           type="button"
           role="tab"
+          aria-selected={tab === 'videos'}
           className={`tab${tab === 'videos' ? ' active' : ''}`}
-          onClick={() => setTab('videos')}
+          onClick={() => goTab('videos')}
         >
           Videos
         </button>
         <button
           type="button"
           role="tab"
+          aria-selected={tab === 'playlists'}
           className={`tab${tab === 'playlists' ? ' active' : ''}`}
-          onClick={() => setTab('playlists')}
+          onClick={() => goTab('playlists')}
         >
           Playlists
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === 'community'}
+          className={`tab${tab === 'community' ? ' active' : ''}`}
+          onClick={() => goTab('community')}
+        >
+          Community
         </button>
       </div>
 
@@ -362,7 +489,7 @@ export function ChannelPage() {
             </>
           )}
         </>
-      : (
+      : tab === 'playlists' ?
         <>
           {isOwner && playlists.length > 0 ?
             <div style={{ marginBottom: '1rem' }}>
@@ -419,6 +546,86 @@ export function ChannelPage() {
             </div>
           )}
         </>
+      : (
+        <section className="community-feed" aria-labelledby="community-heading">
+          <h2 id="community-heading" className="sr-only">
+            Community
+          </h2>
+          {tweetsErr ?
+            <ErrorBanner message={tweetsErr} onDismiss={() => setTweetsErr(null)} />
+          : null}
+          {isOwner ?
+            <form className="tweet-compose" onSubmit={(e) => void onPostTweet(e)}>
+              <label htmlFor="channel-new-tweet" className="small" style={{ fontWeight: 600 }}>
+                Post an update
+              </label>
+              <textarea
+                id="channel-new-tweet"
+                name="tweet"
+                maxLength={2000}
+                placeholder="Share something with subscribers…"
+                value={newTweet}
+                onChange={(e) => setNewTweet(e.target.value)}
+              />
+              <div>
+                <Button type="submit" disabled={tweetPostBusy || !newTweet.trim()}>
+                  {tweetPostBusy ? 'Posting…' : 'Post'}
+                </Button>
+              </div>
+            </form>
+          : null}
+          {tweetsLoading ?
+            <Spinner label="Loading posts…" />
+          : tweets.length === 0 ?
+            <EmptyState
+              title="No posts yet"
+              description={
+                isOwner ?
+                  'Write the first post for your community tab.'
+                : 'This channel has not posted in Community yet.'
+              }
+            />
+          : (
+            <>
+              {tweets.map((tw) => (
+                <article key={String(tw._id)} className="tweet-row">
+                  <div className="tweet-row-meta">
+                    <time dateTime={tw.createdAt}>
+                      {tw.createdAt ?
+                        new Date(tw.createdAt).toLocaleString(undefined, {
+                          dateStyle: 'medium',
+                          timeStyle: 'short',
+                        })
+                      : ''}
+                    </time>
+                    {isOwner ?
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => void onDeleteTweet(String(tw._id))}
+                      >
+                        Delete
+                      </Button>
+                    : null}
+                  </div>
+                  <p className="tweet-body">{tw.content}</p>
+                </article>
+              ))}
+              {tweets.length < tweetTotal ?
+                <div className="pager">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={tweetsLoadMore}
+                    onClick={() => void loadMoreTweets()}
+                  >
+                    {tweetsLoadMore ? 'Loading…' : 'Load more'}
+                  </Button>
+                </div>
+              : null}
+            </>
+          )}
+        </section>
       )}
 
       {playlistModal ?

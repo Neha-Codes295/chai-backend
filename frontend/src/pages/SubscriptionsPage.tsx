@@ -9,6 +9,7 @@ import {
   type SubscriptionRow,
 } from '../api/subscriptions'
 import { LibraryNav } from '../components/LibraryNav'
+import { PageTitle } from '../components/PageTitle'
 import { VideoCard } from '../components/VideoCard'
 import { VideoGridSkeleton } from '../components/VideoGridSkeleton'
 import { Button, EmptyState, ErrorBanner, Spinner } from '../components/ui'
@@ -89,6 +90,7 @@ export function SubscriptionsPage() {
 
   return (
     <div className="page">
+      <PageTitle title="Subscriptions" />
       <LibraryNav />
       <h1 className="page-title">Subscriptions</h1>
 

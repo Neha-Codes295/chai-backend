@@ -41,8 +41,11 @@ export function Layout({ children }: { children: ReactNode }) {
 
   return (
     <div className="app-shell">
-      <header className="top-bar">
-        <div className="top-bar-left">
+      <a href="#main-content" className="skip-link">
+        Skip to main content
+      </a>
+      <header className="top-bar" aria-label="Site header">
+        <div className="top-bar-left" role="navigation" aria-label="Primary">
           <Link to="/" className="brand">
             Playtube
           </Link>
@@ -169,7 +172,9 @@ export function Layout({ children }: { children: ReactNode }) {
         </div>
       ) : null}
 
-      <main className="main-content">{children}</main>
+      <main id="main-content" className="main-content" tabIndex={-1}>
+        {children}
+      </main>
     </div>
   )
 }

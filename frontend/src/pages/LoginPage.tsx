@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthProvider'
+import { PageTitle } from '../components/PageTitle'
 import { Button, ErrorBanner, Input } from '../components/ui'
 
 type LocationState = {
@@ -90,6 +91,7 @@ export function LoginPage() {
 
   return (
     <div className="page page-narrow auth-page">
+      <PageTitle title="Sign in" />
       <h1 className="page-title">Sign in</h1>
       <p className="muted small">
         Use your email or username. Cookies must be enabled for the session.

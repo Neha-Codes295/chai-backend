@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthProvider'
+import { PageTitle } from '../components/PageTitle'
 import { Button, ErrorBanner, Input } from '../components/ui'
 
 function errorsToLines(errors: unknown[] | undefined): string[] | undefined {
@@ -83,6 +84,7 @@ export function RegisterPage() {
 
   return (
     <div className="page page-narrow auth-page">
+      <PageTitle title="Create account" />
       <h1 className="page-title">Create account</h1>
       <p className="muted small">Avatar required. Cover optional.</p>
 

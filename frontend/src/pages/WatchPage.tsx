@@ -17,7 +17,9 @@ import {
   formatViewCount,
 } from '../lib/formatMedia'
 import { CommentSection } from '../components/watch/CommentSection'
+import { PageTitle } from '../components/PageTitle'
 import { Button, EmptyState, ErrorBanner, Spinner } from '../components/ui'
+import { useToast } from '../context/ToastProvider'
 
 function isValidObjectId(id: string | undefined): id is string {
   return Boolean(id && /^[a-f\d]{24}$/i.test(id))
@@ -77,6 +79,7 @@ function normalizeVideoDetail(raw: unknown): VideoDetail | null {
 export function WatchPage() {
   const { videoId } = useParams<{ videoId: string }>()
   const { user } = useAuth()
+  const { pushToast } = useToast()
   const historySent = useRef(false)
 
   const [video, setVideo] = useState<VideoDetail | null>(null)
@@ -93,7 +96,6 @@ export function WatchPage() {
   const [plListLoading, setPlListLoading] = useState(false)
   const [plListErr, setPlListErr] = useState<string | null>(null)
   const [addToPlBusyId, setAddToPlBusyId] = useState<string | null>(null)
-  const [saveToast, setSaveToast] = useState<string | null>(null)
 
   const loadVideo = useCallback(async () => {
     if (!isValidObjectId(videoId)) {
@@ -206,14 +208,14 @@ export function WatchPage() {
       r.message === 'Video already in playlist' ?
         `Already in “${playlistName}”.`
       : `Saved to “${playlistName}”.`
-    setSaveToast(msg)
+    pushToast(msg, 'success')
     setSaveModalOpen(false)
-    window.setTimeout(() => setSaveToast(null), 4000)
   }
 
   if (!isValidObjectId(videoId)) {
     return (
       <div className="page watch-layout">
+        <PageTitle title="Watch" />
         <EmptyState
           title="Invalid link"
           description="Video id must be a 24-character hex value."
@@ -226,6 +228,7 @@ export function WatchPage() {
   if (loading) {
     return (
       <div className="page watch-layout page-center">
+        <PageTitle title="Watch" />
         <Spinner center label="Loading video…" />
       </div>
     )
@@ -234,6 +237,7 @@ export function WatchPage() {
   if (error || !video) {
     return (
       <div className="page watch-layout">
+        <PageTitle title="Watch" />
         <EmptyState
           title="Unavailable"
           description={error || 'This video could not be loaded.'}
@@ -252,6 +256,7 @@ export function WatchPage() {
 
   return (
     <div className="page watch-layout">
+      <PageTitle title={video.title} />
       <div className="player-wrap">
         <video
           className="player"
@@ -338,12 +343,6 @@ export function WatchPage() {
           )}
         </div>
       </div>
-
-      {saveToast ?
-        <p className="muted small" role="status" style={{ margin: '0 0 0.75rem' }}>
-          {saveToast}
-        </p>
-      : null}
 
       <div className="description-card">
         <p className="description-text">{video.description}</p>

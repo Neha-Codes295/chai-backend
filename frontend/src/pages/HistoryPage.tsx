@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { fetchWatchHistory } from '../api/history'
 import { LibraryNav } from '../components/LibraryNav'
+import { PageTitle } from '../components/PageTitle'
 import { VideoCard } from '../components/VideoCard'
 import { VideoGridSkeleton } from '../components/VideoGridSkeleton'
 import { Button, EmptyState, ErrorBanner } from '../components/ui'
@@ -32,6 +33,7 @@ export function HistoryPage() {
 
   return (
     <div className="page">
+      <PageTitle title="Watch history" />
       <LibraryNav />
       <div className="library-page-head">
         <h1 className="page-title">Watch history</h1>

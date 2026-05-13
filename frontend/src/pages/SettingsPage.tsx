@@ -7,10 +7,13 @@ import {
   updateUserCoverImage,
 } from '../api/users'
 import { useAuth } from '../context/AuthProvider'
+import { useToast } from '../context/ToastProvider'
 import { Button, ErrorBanner, Input } from '../components/ui'
+import { PageTitle } from '../components/PageTitle'
 
 export function SettingsPage() {
   const { user, refreshSession } = useAuth()
+  const { pushToast } = useToast()
   const [fullname, setFullname] = useState('')
   const [email, setEmail] = useState('')
   const [accountSaving, setAccountSaving] = useState(false)
@@ -43,18 +46,23 @@ export function SettingsPage() {
     const fn = fullname.trim()
     const em = email.trim()
     if (!fn || !em) {
-      setAccountErr('Full name and email are required.')
+      const msg = 'Full name and email are required.'
+      setAccountErr(msg)
+      pushToast(msg, 'error')
       return
     }
     setAccountSaving(true)
     const r = await updateAccountDetails({ fullname: fn, email: em })
     setAccountSaving(false)
     if (!r.ok) {
-      setAccountErr(r.message || 'Could not update account.')
+      const msg = r.message || 'Could not update account.'
+      setAccountErr(msg)
+      pushToast(msg, 'error')
       return
     }
     await refreshSession()
     setAccountMsg('Profile saved.')
+    pushToast('Profile saved.', 'success')
   }
 
   async function onChangePassword(e: FormEvent) {
@@ -73,13 +81,16 @@ export function SettingsPage() {
     const r = await changePassword({ oldPassword, newPassword })
     setPwSaving(false)
     if (!r.ok) {
-      setPwErr(r.message || 'Could not change password.')
+      const msg = r.message || 'Could not change password.'
+      setPwErr(msg)
+      pushToast(msg, 'error')
       return
     }
     setOldPassword('')
     setNewPassword('')
     setConfirmPassword('')
     setPwOk(true)
+    pushToast('Password updated.', 'success')
   }
 
   async function onUploadAvatar() {
@@ -94,12 +105,15 @@ export function SettingsPage() {
     const r = await updateUserAvatar(fd)
     setMediaSaving(null)
     if (!r.ok) {
-      setMediaErr(r.message || 'Avatar upload failed.')
+      const msg = r.message || 'Avatar upload failed.'
+      setMediaErr(msg)
+      pushToast(msg, 'error')
       return
     }
     setAvatarFile(null)
     await refreshSession()
     setAccountMsg('Avatar updated.')
+    pushToast('Avatar updated.', 'success')
   }
 
   async function onUploadCover() {
@@ -114,12 +128,15 @@ export function SettingsPage() {
     const r = await updateUserCoverImage(fd)
     setMediaSaving(null)
     if (!r.ok) {
-      setMediaErr(r.message || 'Cover upload failed.')
+      const msg = r.message || 'Cover upload failed.'
+      setMediaErr(msg)
+      pushToast(msg, 'error')
       return
     }
     setCoverFile(null)
     await refreshSession()
     setAccountMsg('Cover image updated.')
+    pushToast('Cover image updated.', 'success')
   }
 
   if (!user) {
@@ -132,6 +149,7 @@ export function SettingsPage() {
 
   return (
     <div className="page">
+      <PageTitle title="Settings" />
       <h1 className="page-title">Settings</h1>
       <p className="muted small">
         Signed in as <strong>@{user.username}</strong> ·{' '}

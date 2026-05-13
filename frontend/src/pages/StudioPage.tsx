@@ -8,6 +8,7 @@ import {
   patchVideoMeta,
   toggleVideoPublish,
 } from '../api/videos'
+import { PageTitle } from '../components/PageTitle'
 import { Button, EmptyState, ErrorBanner, Input, Spinner } from '../components/ui'
 import type { VideoDetail } from '../types/video'
 
@@ -229,6 +230,7 @@ export function StudioPage() {
 
   return (
     <div className="page">
+      <PageTitle title="Studio" />
       <div className="studio-head">
         <h1 className="page-title">Studio</h1>
         <div className="studio-head-actions">

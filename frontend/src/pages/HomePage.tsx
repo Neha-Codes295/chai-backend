@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthProvider'
+import { useToast } from '../context/ToastProvider'
 import { fetchVideosPage } from '../api/videos'
+import { PageTitle } from '../components/PageTitle'
 import { VideoCard } from '../components/VideoCard'
 import { VideoGridSkeleton } from '../components/VideoGridSkeleton'
 import { Button, EmptyState, ErrorBanner } from '../components/ui'
@@ -19,8 +21,10 @@ function matchesQuery(video: VideoSummary, q: string): boolean {
 
 export function HomePage() {
   const { user } = useAuth()
+  const { pushToast } = useToast()
   const [params] = useSearchParams()
   const qRaw = params.get('q') ?? ''
+  const sentinelRef = useRef<HTMLDivElement>(null)
 
   const [items, setItems] = useState<VideoSummary[]>([])
   const [page, setPage] = useState(1)
@@ -60,7 +64,9 @@ export function HomePage() {
     const next = page + 1
     const r = await fetchVideosPage(next)
     if (!r.ok || !r.data) {
-      setError(r.message || 'Could not load more videos.')
+      const msg = r.message || 'Could not load more videos.'
+      setError(msg)
+      pushToast(msg, 'error')
       setLoadingMore(false)
       return
     }
@@ -79,7 +85,7 @@ export function HomePage() {
     setPage(r.data.page)
     setHasNextPage(Boolean(r.data.hasNextPage))
     setLoadingMore(false)
-  }, [hasNextPage, loadingMore, loadingInitial, page])
+  }, [hasNextPage, loadingMore, loadingInitial, page, pushToast])
 
   const filtered = useMemo(
     () => items.filter((v) => matchesQuery(v, qRaw)),
@@ -89,8 +95,23 @@ export function HomePage() {
   const showFilterHint =
     Boolean(qRaw.trim()) && items.length > 0 && filtered.length === 0
 
+  useEffect(() => {
+    if (!hasNextPage || loadingMore || loadingInitial || showFilterHint) return
+    const el = sentinelRef.current
+    if (!el) return
+    const obs = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) void loadMore()
+      },
+      { root: null, rootMargin: '240px', threshold: 0 },
+    )
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [hasNextPage, loadingMore, loadingInitial, showFilterHint, loadMore])
+
   return (
     <div className="page">
+      <PageTitle title="Home" />
       <div className="home-feed-head">
         <h1 className="page-title">Home</h1>
         {totalDocs != null && !loadingInitial ?
@@ -164,16 +185,12 @@ export function HomePage() {
           )}
 
           {!showFilterHint && hasNextPage ?
-            <div className="pager">
-              <Button
-                type="button"
-                variant="secondary"
-                disabled={loadingMore}
-                onClick={() => void loadMore()}
-              >
-                {loadingMore ? 'Loading…' : 'Load more'}
-              </Button>
-            </div>
+            <>
+              <div ref={sentinelRef} className="scroll-sentinel" aria-hidden />
+              <p className="muted small pager" role="status">
+                {loadingMore ? 'Loading more videos…' : 'Scroll for more'}
+              </p>
+            </>
           : null}
         </>
       : null}
